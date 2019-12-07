@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE generatorConfiguration
+        PUBLIC "-//mybatis.org//DTD MyBatis Generator Configuration 1.0//EN"
+        "http://mybatis.org/dtd/mybatis-generator-config_1_0.dtd">
+<generatorConfiguration>
+
+
+    <context id="mysql" targetRuntime="MyBatis3" defaultModelType="flat">
+
+        <plugin type="fun.vyse.cloud.generator.mybatis.plugin.ModelPlugin">
+            <property name="lombok" value="true"/>
+        </plugin>
+
+        <commentGenerator type="fun.vyse.cloud.generator.MySQLCommentGenerator">
+            <property name="author" value="huang tian hui"/>
+            <property name="dateFormat" value="yyyy-MM-dd HH:mm:ss"/>
+        </commentGenerator>
+
+        <jdbcConnection driverClass="com.mysql.cj.jdbc.Driver" connectionURL="jdbc:mysql://140.143.66.80:3306/define?nullCatalogMeansCurrent=true" userId="root" password="12312">
+            <property name="useInformationSchema" value="true"/>
+        </jdbcConnection>
+
+        <javaModelGenerator targetPackage="fun.vyse.cloud.domain" targetProject="./src/main/java">
+            <property name="trimStrings" value="true"/>
+            <property name="enableSubPackages" value="true"/>
+            <property name="rootClass" value="fun.vyse.cloud.supplier.common.model.AbstractBaseEntity"/>
+        </javaModelGenerator>
+
+
+        <table tableName="act_model"
+
+               enableInsert="true"
+
+               enableSelectByPrimaryKey="true"
+               enableUpdateByPrimaryKey="true"
+               enableDeleteByPrimaryKey="true"
+
+               enableCountByExample="false"
+               enableSelectByExample="false"
+               enableDeleteByExample="false"
+               enableUpdateByExample="false"
+
+               selectByPrimaryKeyQueryId="false"
+               selectByExampleQueryId="false">
+            <generatedKey column="id" sqlStatement="JDBC" identity="true" type="post"/>
+        </table>
+        
+    </context>
+</generatorConfiguration>
