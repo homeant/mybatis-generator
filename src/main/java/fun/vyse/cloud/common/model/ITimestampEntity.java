@@ -1,4 +1,4 @@
-package fun.vyse.cloud.supplier.common.model;
+package fun.vyse.cloud.common.model;
 
 /**
  * 时间公共字段

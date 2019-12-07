@@ -7,5 +7,5 @@ target/
 
 
 .gitignore
-src/main/java/fun/vyse/cloud/supplier/common/constant/
+src/main/java/fun/vyse/cloud/common/constant/
 src/main/resources/

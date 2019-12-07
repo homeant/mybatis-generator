@@ -5,10 +5,13 @@
 <generatorConfiguration>
 
 
+
     <context id="mysql" targetRuntime="MyBatis3" defaultModelType="flat">
+        <property name="useMapperCommentGenerator" value="true"/>
 
         <plugin type="fun.vyse.cloud.generator.mybatis.plugin.ModelPlugin">
             <property name="lombok" value="true"/>
+            <property name="swagger" value="true"/>
         </plugin>
 
         <commentGenerator type="fun.vyse.cloud.generator.MySQLCommentGenerator">
@@ -20,12 +23,15 @@
             <property name="useInformationSchema" value="true"/>
         </jdbcConnection>
 
-        <javaModelGenerator targetPackage="fun.vyse.cloud.domain" targetProject="./src/main/java">
+        <javaModelGenerator targetPackage="fun.vyse.cloud.domain" targetProject="./src/main/test">
             <property name="trimStrings" value="true"/>
             <property name="enableSubPackages" value="true"/>
-            <property name="rootClass" value="fun.vyse.cloud.supplier.common.model.AbstractBaseEntity"/>
+            <property name="rootClass" value="fun.vyse.cloud.common.model.AbstractBaseEntity"/>
         </javaModelGenerator>
 
+        <javaClientGenerator targetPackage="fun.vyse.cloud.repository" targetProject="./src/main/test" type="ANNOTATEDMAPPER">
+
+        </javaClientGenerator>
 
         <table tableName="act_model"
 

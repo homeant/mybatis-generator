@@ -1,4 +1,4 @@
-package fun.vyse.cloud.supplier.common.model;
+package fun.vyse.cloud.common.model;
 
 import java.io.Serializable;
 
