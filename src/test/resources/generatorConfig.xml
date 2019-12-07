@@ -23,13 +23,13 @@
             <property name="useInformationSchema" value="true"/>
         </jdbcConnection>
 
-        <javaModelGenerator targetPackage="fun.vyse.cloud.domain" targetProject="./src/main/test">
+        <javaModelGenerator targetPackage="fun.vyse.cloud.test.domain" targetProject="./src/test/java">
             <property name="trimStrings" value="true"/>
             <property name="enableSubPackages" value="true"/>
             <property name="rootClass" value="fun.vyse.cloud.common.model.AbstractBaseEntity"/>
         </javaModelGenerator>
 
-        <javaClientGenerator targetPackage="fun.vyse.cloud.repository" targetProject="./src/main/test" type="ANNOTATEDMAPPER">
+        <javaClientGenerator targetPackage="fun.vyse.cloud.test.repository" targetProject="./src/test/java" type="ANNOTATEDMAPPER">
 
         </javaClientGenerator>
 
