@@ -7,9 +7,9 @@ import lombok.Data;
  * @author huangtianhui
  */
 @Data
-public abstract class AbstractBaseEntity implements ITimestampEntity {
+public abstract class AbstractBaseEntity implements ITimestampEntity<Long> {
 
-    private Integer id;
+    private Long id;
 
     /**
      * 创建时间

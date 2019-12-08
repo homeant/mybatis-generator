@@ -16,13 +16,13 @@ import java.util.Set;
 /**
  * @author Huang Tian Hui
  */
-public class ModelCommentGenerator implements CommentGenerator {
+public class VyseCommentGenerator implements CommentGenerator {
 
     private String author;
 
     private String dateFormat;
 
-    public ModelCommentGenerator(){
+    public VyseCommentGenerator(){
         super();
     }
 
@@ -123,9 +123,16 @@ public class ModelCommentGenerator implements CommentGenerator {
         method.addJavaDocLine(sb.toString());
         method.addJavaDocLine(" */");
     }
+
+    /**
+     * map层代码注释
+     * @param method
+     * @param introspectedTable
+     */
     @Override
     public void addGeneralMethodComment(Method method, IntrospectedTable introspectedTable) {
 
+        System.out.println(method.getName());
     }
     @Override
     public void addJavaFileComment(CompilationUnit compilationUnit) {
@@ -157,6 +164,6 @@ public class ModelCommentGenerator implements CommentGenerator {
     }
     @Override
     public void addClassAnnotation(InnerClass innerClass, IntrospectedTable introspectedTable, Set<FullyQualifiedJavaType> set) {
-
+        System.out.println(innerClass);
     }
 }
