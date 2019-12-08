@@ -1,6 +1,7 @@
 package fun.vyse.cloud.generator.mybatis.plugin;
 
 import fun.vyse.cloud.generator.mybatis.plugin.comment.VyseCommentGenerator;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.mybatis.generator.api.IntrospectedColumn;
 import org.mybatis.generator.api.IntrospectedTable;
@@ -96,6 +97,16 @@ public class VysePlugin extends PluginAdapter {
         String methodName = getByPrimaryKeyMethodName(buffer, introspectedTable);
         methodName = methodName+"Selective";
         method.setName(methodName);
+        List<String> annotations = method.getAnnotations();
+        if(CollectionUtils.isNotEmpty(annotations)){
+            for (int i = 0; i < annotations.size(); i++) {
+                String annotation = annotations.get(i);
+                if(annotation.indexOf("@UpdateProvider")==0){
+                    annotation = annotation.replaceAll("updateByPrimaryKeySelective",methodName);
+                    annotations.set(i,annotation);
+                }
+            }
+        }
         return super.clientUpdateByPrimaryKeySelectiveMethodGenerated(method, interfaze, introspectedTable);
     }
 
@@ -114,6 +125,15 @@ public class VysePlugin extends PluginAdapter {
         methodName = methodName+"Blobs";
         method.setName(methodName);
         return super.clientUpdateByPrimaryKeyWithBLOBsMethodGenerated(method, interfaze, introspectedTable);
+    }
+
+    @Override
+    public boolean providerUpdateByPrimaryKeySelectiveMethodGenerated(Method method, TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
+        StringBuffer buffer = new StringBuffer("updateBy");
+        String methodName = getByPrimaryKeyMethodName(buffer, introspectedTable);
+        methodName = methodName+"Selective";
+        method.setName(methodName);
+        return super.providerUpdateByPrimaryKeySelectiveMethodGenerated(method, topLevelClass, introspectedTable);
     }
 
     @Override

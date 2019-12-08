@@ -131,7 +131,6 @@ public class VyseCommentGenerator implements CommentGenerator {
      */
     @Override
     public void addGeneralMethodComment(Method method, IntrospectedTable introspectedTable) {
-
         System.out.println(method.getName());
     }
     @Override
