@@ -1,5 +1,6 @@
 package fun.vyse.cloud.generator.mybatis.plugin.comment;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.mybatis.generator.api.CommentGenerator;
 import org.mybatis.generator.api.IntrospectedColumn;
@@ -10,6 +11,7 @@ import org.mybatis.generator.internal.util.StringUtility;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
@@ -56,7 +58,6 @@ public class VyseCommentGenerator implements CommentGenerator {
 
     @Override
     public void addModelClassComment(TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
-        SimpleDateFormat dateFormatter = new SimpleDateFormat(dateFormat);
         // 获取表注释
         String remarks = introspectedTable.getRemarks();
         if(StringUtils.isBlank(remarks)){
@@ -66,7 +67,7 @@ public class VyseCommentGenerator implements CommentGenerator {
         topLevelClass.addJavaDocLine(" * " + remarks);
         topLevelClass.addJavaDocLine(" *");
         topLevelClass.addJavaDocLine(" * @author " + author);
-        topLevelClass.addJavaDocLine(" * @date " + dateFormatter.format(new Date()));
+        topLevelClass.addJavaDocLine(" * @date " + getDateString());
         topLevelClass.addJavaDocLine(" */");
     }
 
@@ -131,12 +132,31 @@ public class VyseCommentGenerator implements CommentGenerator {
      */
     @Override
     public void addGeneralMethodComment(Method method, IntrospectedTable introspectedTable) {
-        System.out.println(method.getName());
+        method.addJavaDocLine("/**");
+        method.addJavaDocLine(" * " + method.getName());
+        List<Parameter> parameters = method.getParameters();
+        if (CollectionUtils.isNotEmpty(parameters)) {
+            parameters.forEach(r -> {
+                method.addJavaDocLine(" * @param " + r.getName());
+            });
+        }
+        method.addJavaDocLine("*/");
     }
+
+    /**
+     * 不知道是谁的注释
+     *
+     * @param compilationUnit
+     */
     @Override
     public void addJavaFileComment(CompilationUnit compilationUnit) {
-
+        compilationUnit.addFileCommentLine("/**");
+        compilationUnit.addFileCommentLine(" * " + compilationUnit.getClass().getName());
+        compilationUnit.addFileCommentLine(" * @author " + author);
+        compilationUnit.addFileCommentLine(" * @date " + getDateString());
+        compilationUnit.addFileCommentLine("*/");
     }
+
     @Override
     public void addComment(XmlElement xmlElement) {
 
@@ -157,12 +177,19 @@ public class VyseCommentGenerator implements CommentGenerator {
     public void addFieldAnnotation(Field field, IntrospectedTable introspectedTable, Set<FullyQualifiedJavaType> set) {
 
     }
+
     @Override
     public void addFieldAnnotation(Field field, IntrospectedTable introspectedTable, IntrospectedColumn introspectedColumn, Set<FullyQualifiedJavaType> set) {
 
     }
+
     @Override
     public void addClassAnnotation(InnerClass innerClass, IntrospectedTable introspectedTable, Set<FullyQualifiedJavaType> set) {
         System.out.println(innerClass);
+    }
+
+    private String getDateString() {
+        SimpleDateFormat dateFormatter = new SimpleDateFormat(dateFormat);
+        return dateFormatter.format(new Date());
     }
 }

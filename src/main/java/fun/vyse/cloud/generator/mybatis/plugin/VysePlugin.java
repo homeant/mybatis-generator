@@ -1,20 +1,22 @@
 package fun.vyse.cloud.generator.mybatis.plugin;
 
+import com.google.common.collect.Lists;
 import fun.vyse.cloud.generator.mybatis.plugin.comment.VyseCommentGenerator;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.mybatis.generator.api.IntrospectedColumn;
-import org.mybatis.generator.api.IntrospectedTable;
-import org.mybatis.generator.api.PluginAdapter;
-import org.mybatis.generator.api.dom.java.Field;
-import org.mybatis.generator.api.dom.java.Interface;
-import org.mybatis.generator.api.dom.java.Method;
-import org.mybatis.generator.api.dom.java.TopLevelClass;
+import org.mybatis.generator.api.*;
+import org.mybatis.generator.api.dom.java.*;
 import org.mybatis.generator.config.CommentGeneratorConfiguration;
 import org.mybatis.generator.config.Context;
+import org.mybatis.generator.config.DomainObjectRenamingRule;
+import org.mybatis.generator.config.ModelType;
+import org.mybatis.generator.internal.util.JavaBeansUtil;
 
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static fun.vyse.cloud.generator.util.PropertiesUtil.getPropertyAsBoolean;
 import static fun.vyse.cloud.generator.util.PropertiesUtil.getPropertyAsString;
@@ -34,6 +36,12 @@ public class VysePlugin extends PluginAdapter {
     private boolean swagger = false;
 
     private boolean comment = false;
+
+    private boolean service = false;
+
+    private String targetProject;
+
+    private String baseJavaPackage;
 
     @Override
     public boolean validate(List<String> list) {
@@ -162,6 +170,39 @@ public class VysePlugin extends PluginAdapter {
     }
 
     @Override
+    public List<GeneratedJavaFile> contextGenerateAdditionalJavaFiles(IntrospectedTable introspectedTable) {
+        List<GeneratedJavaFile> javaFiles = super.contextGenerateAdditionalJavaFiles(introspectedTable);
+        if (service) {
+            if (CollectionUtils.isEmpty(javaFiles)) {
+                javaFiles = Lists.newArrayList();
+            }
+            DomainObjectRenamingRule rule = introspectedTable.getTableConfiguration().getDomainObjectRenamingRule();
+            String domainObjectName = introspectedTable.getTableConfiguration().getDomainObjectName();
+            if (StringUtils.isBlank(domainObjectName)) {
+                domainObjectName = introspectedTable.getTableConfiguration().getTableName();
+            }
+            if (rule != null) {
+                Pattern pattern = Pattern.compile(rule.getSearchString());
+                String replaceString = rule.getReplaceString();
+                replaceString = replaceString == null ? "" : replaceString;
+                Matcher matcher = pattern.matcher(domainObjectName);
+                domainObjectName = matcher.replaceAll(replaceString);
+            }
+            domainObjectName = JavaBeansUtil.getCamelCaseString(domainObjectName, true);
+            TopLevelClass serviceClass = new TopLevelClass(baseJavaPackage + ".service." + domainObjectName + "Service");
+            serviceClass.setVisibility(JavaVisibility.PUBLIC);
+            GeneratedJavaFile serviceFile = new GeneratedJavaFile(serviceClass, targetProject, context.getJavaFormatter());
+            javaFiles.add(serviceFile);
+
+            TopLevelClass serviceImplClass = new TopLevelClass(baseJavaPackage + ".service.impl." + domainObjectName + "ServiceImpl");
+            serviceImplClass.setVisibility(JavaVisibility.PUBLIC);
+            GeneratedJavaFile serviceImplFile = new GeneratedJavaFile(serviceImplClass, targetProject, context.getJavaFormatter());
+            javaFiles.add(serviceImplFile);
+        }
+        return javaFiles;
+    }
+
+    @Override
     public void setContext(Context context) {
         super.setContext(context);
         comment = Boolean.parseBoolean(context.getProperty("useMapperCommentGenerator"));
@@ -170,12 +211,15 @@ public class VysePlugin extends PluginAdapter {
             commentCfg.setConfigurationType(VyseCommentGenerator.class.getCanonicalName());
             context.setCommentGeneratorConfiguration(commentCfg);
         }
+        targetProject = getPropertyAsString(super.context.getProperties(), "targetProject");
+        baseJavaPackage = getPropertyAsString(super.context.getProperties(), "baseJavaPackage");
         //支持oracle获取注释#114
         context.getJdbcConnectionConfiguration().addProperty("remarksReporting", "true");
         //支持mysql获取注释
         context.getJdbcConnectionConfiguration().addProperty("useInformationSchema", "true");
 
         context.getCommentGeneratorConfiguration().addProperty("dateFormat", "yyyy-MM-dd");
+
     }
 
     private String getByPrimaryKeyMethodName(StringBuffer buffer,IntrospectedTable introspectedTable){
@@ -198,6 +242,7 @@ public class VysePlugin extends PluginAdapter {
         lombok = getPropertyAsBoolean(properties, "lombok", false);
         lombokBuilder = getPropertyAsBoolean(properties, "lombokBuilder", false);
         swagger = getPropertyAsBoolean(properties, "swagger", false);
+        service = getPropertyAsBoolean(properties, "service", false);
         super.context.getCommentGeneratorConfiguration().addProperty("lombok", getPropertyAsString(properties, "lombok"));
         super.context.getCommentGeneratorConfiguration().addProperty("swagger", getPropertyAsString(properties, "swagger"));
     }

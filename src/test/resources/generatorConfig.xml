@@ -9,12 +9,14 @@
     <context id="mysql" targetRuntime="MyBatis3" defaultModelType="flat">
         <property name="useMapperCommentGenerator" value="true"/>
         <property name="baseJavaPackage" value="fun.vyse.cloud.test"/>
+        <property name="targetProject" value="./src/test/java"/>
 
 
         <plugin type="fun.vyse.cloud.generator.mybatis.plugin.VysePlugin">
             <property name="lombok" value="true"/>
             <property name="lombokBuilder" value="true"/>
             <property name="swagger" value="true"/>
+            <property name="service" value="true"/>
         </plugin>
 
         <jdbcConnection driverClass="com.mysql.cj.jdbc.Driver" connectionURL="jdbc:mysql://140.143.66.80:3306/define?nullCatalogMeansCurrent=true" userId="root" password="12312312">
@@ -45,6 +47,7 @@
                selectByPrimaryKeyQueryId="false"
                selectByExampleQueryId="false">
             <generatedKey column="id" sqlStatement="JDBC" identity="true" type="post"/>
+            <domainObjectRenamingRule searchString="^act_" replaceString=""/>
         </table>
         
     </context>
