@@ -189,13 +189,15 @@ public class VysePlugin extends PluginAdapter {
                 domainObjectName = matcher.replaceAll(replaceString);
             }
             domainObjectName = JavaBeansUtil.getCamelCaseString(domainObjectName, true);
-            TopLevelClass serviceClass = new TopLevelClass(baseJavaPackage + ".service." + domainObjectName + "Service");
+            Interface serviceClass = new Interface(baseJavaPackage + ".service." + domainObjectName + "Service");
             serviceClass.setVisibility(JavaVisibility.PUBLIC);
             GeneratedJavaFile serviceFile = new GeneratedJavaFile(serviceClass, targetProject, context.getJavaFormatter());
             javaFiles.add(serviceFile);
 
             TopLevelClass serviceImplClass = new TopLevelClass(baseJavaPackage + ".service.impl." + domainObjectName + "ServiceImpl");
             serviceImplClass.setVisibility(JavaVisibility.PUBLIC);
+            serviceImplClass.addImportedType(serviceClass.getType());
+            serviceImplClass.addSuperInterface(serviceClass.getType());
             GeneratedJavaFile serviceImplFile = new GeneratedJavaFile(serviceImplClass, targetProject, context.getJavaFormatter());
             javaFiles.add(serviceImplFile);
         }
