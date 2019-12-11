@@ -12,6 +12,7 @@ import org.mybatis.generator.config.DomainObjectRenamingRule;
 import org.mybatis.generator.config.ModelType;
 import org.mybatis.generator.internal.util.JavaBeansUtil;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -50,36 +51,7 @@ public class VysePlugin extends PluginAdapter {
 
     @Override
     public boolean modelBaseRecordClassGenerated(TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
-        if (lombok) {
-            topLevelClass.addImportedType("lombok.Data");
-            topLevelClass.addAnnotation("@Data");
-            if (topLevelClass.getSuperClass().isPresent()) {
-                topLevelClass.addImportedType("lombok.EqualsAndHashCode");
-                topLevelClass.addImportedType("lombok.ToString");
-                topLevelClass.addAnnotation("@EqualsAndHashCode(callSuper = false)");
-                topLevelClass.addAnnotation("@ToString(callSuper = true)");
-            }
-        }
-        if (lombokBuilder) {
-            topLevelClass.addImportedType("lombok.Builder");
-            topLevelClass.addAnnotation("@Builder");
-        }
-        if (swagger) {
-            //导包
-            topLevelClass.addImportedType("io.swagger.annotations.ApiModel");
-            topLevelClass.addImportedType("io.swagger.annotations.ApiModelProperty");
-            //增加注解(去除注释中的转换符)
-            String remarks = introspectedTable.getRemarks();
-            if (remarks == null) {
-                remarks = "";
-            }
-            remarks = remarks.replaceAll("\r", "").replaceAll("\n", "");
-            if (StringUtils.isNoneBlank(remarks)) {
-                topLevelClass.addAnnotation("@ApiModel(\"" + remarks + "\")");
-            } else {
-                topLevelClass.addAnnotation("@ApiModel(\"" + topLevelClass.getType().getShortName() + "\")");
-            }
-        }
+        addAnnotation(topLevelClass, introspectedTable);
         return true;
     }
 
@@ -156,16 +128,7 @@ public class VysePlugin extends PluginAdapter {
 
     @Override
     public boolean modelFieldGenerated(Field field, TopLevelClass topLevelClass, IntrospectedColumn introspectedColumn, IntrospectedTable introspectedTable, ModelClassType modelClassType) {
-        if (swagger) {
-            String remarks = introspectedColumn.getRemarks();
-            remarks = remarks.replaceAll("\r", "").replaceAll("\n", "");
-            if (StringUtils.isNoneBlank(remarks)) {
-                StringBuffer buffer = new StringBuffer("@ApiModelProperty(");
-                buffer.append("value=\"" + remarks + "\"");
-                buffer.append(")");
-                field.addAnnotation(buffer.toString());
-            }
-        }
+        addFieldAnnotation(field, introspectedColumn);
         return true;
     }
 
@@ -197,6 +160,38 @@ public class VysePlugin extends PluginAdapter {
             serviceImplClass.addSuperInterface(serviceClass.getType());
             GeneratedJavaFile serviceImplFile = new GeneratedJavaFile(serviceImplClass, targetProject, context.getJavaFormatter());
             javaFiles.add(serviceImplFile);
+
+            TopLevelClass dtoReqClass = new TopLevelClass(baseJavaPackage + ".dto." + domainObjectName + "ReqDTO");
+            addAnnotation(dtoReqClass, introspectedTable);
+            dtoReqClass.addImportedType("java.io.Serializable");
+            dtoReqClass.addSuperInterface(new FullyQualifiedJavaType("java.io.Serializable"));
+            dtoReqClass.setVisibility(JavaVisibility.PUBLIC);
+            List<IntrospectedColumn> allColumns = introspectedTable.getAllColumns();
+            if (CollectionUtils.isNotEmpty(allColumns)) {
+                allColumns.stream().forEach(r -> {
+                    Field field = new Field(JavaBeansUtil.getJavaBeansField(r, this.context, introspectedTable));
+                    addFieldAnnotation(field, r);
+                    dtoReqClass.addField(field);
+                });
+            }
+            GeneratedJavaFile dtoReqFile = new GeneratedJavaFile(dtoReqClass, targetProject, context.getJavaFormatter());
+            javaFiles.add(dtoReqFile);
+
+            TopLevelClass dtoResultClass = new TopLevelClass(baseJavaPackage + ".dto." + domainObjectName + "ResultDTO");
+            addAnnotation(dtoResultClass, introspectedTable);
+            dtoResultClass.addImportedType("java.io.Serializable");
+            dtoResultClass.addSuperInterface(new FullyQualifiedJavaType("java.io.Serializable"));
+            dtoResultClass.setVisibility(JavaVisibility.PUBLIC);
+            if (CollectionUtils.isNotEmpty(allColumns)) {
+                allColumns.stream().forEach(r -> {
+                    Field field = new Field(JavaBeansUtil.getJavaBeansField(r, this.context, introspectedTable));
+                    addFieldAnnotation(field, r);
+                    dtoResultClass.addField(field);
+                });
+            }
+            GeneratedJavaFile dtoResultFile = new GeneratedJavaFile(dtoResultClass, targetProject, context.getJavaFormatter());
+            javaFiles.add(dtoResultFile);
+
         }
         return javaFiles;
     }
@@ -244,6 +239,52 @@ public class VysePlugin extends PluginAdapter {
         service = getPropertyAsBoolean(properties, "service", false);
         super.context.getCommentGeneratorConfiguration().addProperty("lombok", getPropertyAsString(properties, "lombok"));
         super.context.getCommentGeneratorConfiguration().addProperty("swagger", getPropertyAsString(properties, "swagger"));
+    }
+
+    private void addAnnotation(TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
+        if (lombok) {
+            topLevelClass.addImportedType("lombok.Data");
+            topLevelClass.addAnnotation("@Data");
+            if (topLevelClass.getSuperClass().isPresent()) {
+                topLevelClass.addImportedType("lombok.EqualsAndHashCode");
+                topLevelClass.addImportedType("lombok.ToString");
+                topLevelClass.addAnnotation("@EqualsAndHashCode(callSuper = false)");
+                topLevelClass.addAnnotation("@ToString(callSuper = true)");
+            }
+        }
+        if (lombokBuilder) {
+            topLevelClass.addImportedType("lombok.Builder");
+            topLevelClass.addAnnotation("@Builder");
+        }
+        if (swagger) {
+            //导包
+            topLevelClass.addImportedType("io.swagger.annotations.ApiModel");
+            topLevelClass.addImportedType("io.swagger.annotations.ApiModelProperty");
+            //增加注解(去除注释中的转换符)
+            String remarks = introspectedTable.getRemarks();
+            if (remarks == null) {
+                remarks = "";
+            }
+            remarks = remarks.replaceAll("\r", "").replaceAll("\n", "");
+            if (StringUtils.isNoneBlank(remarks)) {
+                topLevelClass.addAnnotation("@ApiModel(\"" + remarks + "\")");
+            } else {
+                topLevelClass.addAnnotation("@ApiModel(\"" + topLevelClass.getType().getShortName() + "\")");
+            }
+        }
+    }
+
+    private void addFieldAnnotation(Field field, IntrospectedColumn introspectedColumn) {
+        if (swagger) {
+            String remarks = introspectedColumn.getRemarks();
+            remarks = remarks.replaceAll("\r", "").replaceAll("\n", "");
+            if (StringUtils.isNoneBlank(remarks)) {
+                StringBuffer buffer = new StringBuffer("@ApiModelProperty(");
+                buffer.append("value=\"" + remarks + "\"");
+                buffer.append(")");
+                field.addAnnotation(buffer.toString());
+            }
+        }
     }
 
 }

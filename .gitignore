@@ -7,5 +7,5 @@ target/
 
 
 .gitignore
-src/test/java
-src/test/resources
+src/test/java/
+src/test/resources/

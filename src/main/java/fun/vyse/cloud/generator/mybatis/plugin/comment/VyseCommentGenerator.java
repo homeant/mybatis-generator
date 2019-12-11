@@ -143,18 +143,15 @@ public class VyseCommentGenerator implements CommentGenerator {
         method.addJavaDocLine("*/");
     }
 
+
     /**
-     * 不知道是谁的注释
+     * java copyright
      *
      * @param compilationUnit
      */
     @Override
     public void addJavaFileComment(CompilationUnit compilationUnit) {
-        compilationUnit.addFileCommentLine("/**");
-        compilationUnit.addFileCommentLine(" * " + compilationUnit.getClass().getName());
-        compilationUnit.addFileCommentLine(" * @author " + author);
-        compilationUnit.addFileCommentLine(" * @date " + getDateString());
-        compilationUnit.addFileCommentLine("*/");
+
     }
 
     @Override
