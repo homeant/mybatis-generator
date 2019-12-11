@@ -16,6 +16,7 @@
             <property name="lombokBuilder" value="true"/>
             <property name="swagger" value="true"/>
             <property name="service" value="true"/>
+            <property name="dto" value="true"/>
         </plugin>
 
         <jdbcConnection driverClass="com.mysql.cj.jdbc.Driver"
@@ -49,7 +50,7 @@
                selectByPrimaryKeyQueryId="false"
                selectByExampleQueryId="false">
             <generatedKey column="id" sqlStatement="JDBC" identity="true" type="post"/>
-            <domainObjectRenamingRule searchString="^act_" replaceString=""/>
+            <domainObjectRenamingRule searchString="^Act" replaceString=""/>
         </table>
 
     </context>
