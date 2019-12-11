@@ -177,10 +177,8 @@ public class VysePlugin extends PluginAdapter {
                 javaFiles = Lists.newArrayList();
             }
             DomainObjectRenamingRule rule = introspectedTable.getTableConfiguration().getDomainObjectRenamingRule();
-            String domainObjectName = introspectedTable.getTableConfiguration().getDomainObjectName();
-            if (StringUtils.isBlank(domainObjectName)) {
-                domainObjectName = introspectedTable.getTableConfiguration().getTableName();
-            }
+            String domainObjectName = introspectedTable.getTableConfiguration().getTableName();
+            domainObjectName = JavaBeansUtil.getCamelCaseString(domainObjectName, true);
             if (rule != null) {
                 Pattern pattern = Pattern.compile(rule.getSearchString());
                 String replaceString = rule.getReplaceString();
@@ -188,7 +186,6 @@ public class VysePlugin extends PluginAdapter {
                 Matcher matcher = pattern.matcher(domainObjectName);
                 domainObjectName = matcher.replaceAll(replaceString);
             }
-            domainObjectName = JavaBeansUtil.getCamelCaseString(domainObjectName, true);
             Interface serviceClass = new Interface(baseJavaPackage + ".service." + domainObjectName + "Service");
             serviceClass.setVisibility(JavaVisibility.PUBLIC);
             GeneratedJavaFile serviceFile = new GeneratedJavaFile(serviceClass, targetProject, context.getJavaFormatter());
