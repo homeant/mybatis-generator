@@ -7,5 +7,6 @@ target/
 
 
 .gitignore
+src/main/java/fun/vyse/cloud/common/constant/
 src/main/resources/
-src/test/java/com/xiaobangbaoxian/supplier/
+src/test/java/fun/vyse/cloud/test
