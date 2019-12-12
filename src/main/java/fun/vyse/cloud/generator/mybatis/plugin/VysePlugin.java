@@ -8,17 +8,13 @@ import org.mybatis.generator.api.GeneratedJavaFile;
 import org.mybatis.generator.api.IntrospectedColumn;
 import org.mybatis.generator.api.IntrospectedTable;
 import org.mybatis.generator.api.PluginAdapter;
-import org.mybatis.generator.api.dom.java.Field;
-import org.mybatis.generator.api.dom.java.FullyQualifiedJavaType;
-import org.mybatis.generator.api.dom.java.Interface;
-import org.mybatis.generator.api.dom.java.JavaVisibility;
-import org.mybatis.generator.api.dom.java.Method;
-import org.mybatis.generator.api.dom.java.TopLevelClass;
+import org.mybatis.generator.api.dom.java.*;
 import org.mybatis.generator.config.CommentGeneratorConfiguration;
 import org.mybatis.generator.config.Context;
 import org.mybatis.generator.config.DomainObjectRenamingRule;
 import org.mybatis.generator.internal.util.JavaBeansUtil;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
@@ -40,17 +36,28 @@ public class VysePlugin extends PluginAdapter {
 
     private boolean lombokBuilder = false;
 
-    private boolean swagger = false;
+    private boolean enableSwagger = false;
 
     private boolean comment = false;
 
-    private boolean service = false;
+    private boolean createService = false;
 
-    private boolean dto = false;
+    private boolean createDto = false;
+
+    private boolean createConvert = false;
 
     private String targetProject;
 
     private String baseJavaPackage;
+
+    private String servicePackage;
+
+    private String serviceImplPackage;
+
+    private String dtoPackage;
+
+    private String convertPackage;
+
 
     @Override
     public boolean validate(List<String> list) {
@@ -143,8 +150,8 @@ public class VysePlugin extends PluginAdapter {
     @Override
     public List<GeneratedJavaFile> contextGenerateAdditionalJavaFiles(IntrospectedTable introspectedTable) {
         List<GeneratedJavaFile> javaFiles = super.contextGenerateAdditionalJavaFiles(introspectedTable);
-        String domainObjectName = getDomainObjectName(introspectedTable);
-        if (service) {
+        String domainObjectName = getDomainName(introspectedTable);
+        if (createService) {
             if (CollectionUtils.isEmpty(javaFiles)) {
                 javaFiles = Lists.newArrayList();
             }
@@ -166,11 +173,11 @@ public class VysePlugin extends PluginAdapter {
     }
 
     private List<GeneratedJavaFile> generatedDto(IntrospectedTable introspectedTable) {
-        if (!dto) {
+        if (!createDto) {
             return Collections.emptyList();
         }
-        String domainObjectName = getDomainObjectName(introspectedTable);
-        TopLevelClass dtoReqClass = new TopLevelClass(baseJavaPackage + ".dto." + domainObjectName + "ReqDTO");
+        String domainObjectName = getDomainName(introspectedTable);
+        TopLevelClass dtoReqClass = new TopLevelClass(baseJavaPackage + "." + dtoPackage + "." + domainObjectName + "ReqDTO");
         addAnnotation(dtoReqClass, introspectedTable);
         dtoReqClass.addImportedType("java.io.Serializable");
         dtoReqClass.addSuperInterface(new FullyQualifiedJavaType("java.io.Serializable"));
@@ -186,7 +193,7 @@ public class VysePlugin extends PluginAdapter {
         }
         GeneratedJavaFile dtoReqFile = new GeneratedJavaFile(dtoReqClass, targetProject, context.getJavaFormatter());
 
-        TopLevelClass dtoResultClass = new TopLevelClass(baseJavaPackage + ".dto." + domainObjectName + "ResultDTO");
+        TopLevelClass dtoResultClass = new TopLevelClass(baseJavaPackage + "." + dtoPackage + "." + domainObjectName + "ResultDTO");
         addAnnotation(dtoResultClass, introspectedTable);
         dtoResultClass.addImportedType("java.io.Serializable");
         dtoResultClass.addSuperInterface(new FullyQualifiedJavaType("java.io.Serializable"));
@@ -200,7 +207,91 @@ public class VysePlugin extends PluginAdapter {
             });
         }
         GeneratedJavaFile dtoResultFile = new GeneratedJavaFile(dtoResultClass, targetProject, context.getJavaFormatter());
-        return Lists.newArrayList(dtoReqFile, dtoResultFile);
+        ArrayList<GeneratedJavaFile> generatedJavaFiles = Lists.newArrayList(dtoReqFile, dtoResultFile);
+        generatedJavaFiles.addAll(generatedConvert(introspectedTable));
+        return generatedJavaFiles;
+    }
+
+    /**
+     * 生成转换类
+     *
+     * @param introspectedTable
+     * @return
+     */
+    public List<GeneratedJavaFile> generatedConvert(IntrospectedTable introspectedTable) {
+        if (!createConvert || !createDto) {
+            return Collections.emptyList();
+        }
+
+        String domainName = getDomainName(introspectedTable);
+        String convertClassName = domainName + "Convert";
+        String absoluteClassName = baseJavaPackage + "." + convertPackage + "." + convertClassName;
+        String domainPath = getDomainTargetPackage() + "." + domainName;
+        String domainParam = domainName.substring(0, 1).toLowerCase() + domainName.substring(1);
+        FullyQualifiedJavaType domainType = new FullyQualifiedJavaType(domainPath);
+
+        TopLevelClass reqConvertClass = new TopLevelClass(absoluteClassName);
+        reqConvertClass.setVisibility(JavaVisibility.PUBLIC);
+
+        reqConvertClass.addImportedType(domainPath);
+
+        String reqDtoName = domainName + "ReqDTO";
+        String reqDtoNamePath = baseJavaPackage + "." + dtoPackage + "." + reqDtoName;
+        String reqDtoParam = reqDtoName.substring(0, 1).toLowerCase() + reqDtoName.substring(1);
+        FullyQualifiedJavaType reqDtoType = new FullyQualifiedJavaType(reqDtoNamePath);
+        reqConvertClass.addImportedType(reqDtoNamePath);
+        String reqMethodName = domainName + "ReqDtoConvert" + getDomainObjectName(introspectedTable);
+        reqMethodName = reqMethodName.substring(0, 1).toLowerCase() + reqMethodName.substring(1);
+
+        Method reqMethod = new Method(reqMethodName);
+        reqMethod.setVisibility(JavaVisibility.PUBLIC);
+        reqMethod.setStatic(true);
+
+        reqMethod.addParameter(new Parameter(reqDtoType, reqDtoParam));
+        reqMethod.setReturnType(domainType);
+
+        reqMethod.addBodyLine(domainName + " " + domainParam + " = new " + domainName + "();");
+        List<IntrospectedColumn> columns = introspectedTable.getAllColumns();
+        if (CollectionUtils.isNotEmpty(columns)) {
+            columns.stream().forEach(r -> {
+                Method setter = JavaBeansUtil.getJavaBeansSetter(r, context, introspectedTable);
+                String getter = JavaBeansUtil.getGetterMethodName(r.getJavaProperty(), reqDtoType);
+                String setString = domainParam + "." + setter.getName() + "(" + reqDtoParam + "." + getter + "());";
+                reqMethod.addBodyLine(setString);
+            });
+        }
+        reqMethod.addBodyLine("return " + domainParam + ";");
+        reqConvertClass.addMethod(reqMethod);
+
+        // -----------------------------------------------------------------------------
+        String resultDtoName = domainName + "ResultDTO";
+        String resultDtoNamePath = baseJavaPackage + "." + dtoPackage + "." + resultDtoName;
+        String resultDtoParam = resultDtoName.substring(0, 1).toLowerCase() + resultDtoName.substring(1);
+        FullyQualifiedJavaType resultDtoType = new FullyQualifiedJavaType(resultDtoNamePath);
+        reqConvertClass.addImportedType(resultDtoType);
+        String resultMethodName = getDomainObjectName(introspectedTable) + "Convert" + domainName + "ResultDto";
+        resultMethodName = resultMethodName.substring(0, 1).toLowerCase() + resultMethodName.substring(1);
+
+        Method resultMethod = new Method(resultMethodName);
+        resultMethod.setVisibility(JavaVisibility.PUBLIC);
+        resultMethod.setStatic(true);
+        resultMethod.addParameter(new Parameter(domainType, domainParam));
+        resultMethod.setReturnType(resultDtoType);
+
+        resultMethod.addBodyLine(resultDtoName + " " + resultDtoParam + " = new " + resultDtoName + "();");
+        if (CollectionUtils.isNotEmpty(columns)) {
+            columns.stream().forEach(r -> {
+                Method setter = JavaBeansUtil.getJavaBeansSetter(r, context, introspectedTable);
+                String getter = JavaBeansUtil.getGetterMethodName(r.getJavaProperty(), domainType);
+                String setString = resultDtoParam + "." + setter.getName() + "(" + domainParam + "." + getter + "());";
+                resultMethod.addBodyLine(setString);
+            });
+        }
+        resultMethod.addBodyLine("return " + resultDtoParam + ";");
+        reqConvertClass.addMethod(resultMethod);
+
+        GeneratedJavaFile convertFile = new GeneratedJavaFile(reqConvertClass, targetProject, context.getJavaFormatter());
+        return Lists.newArrayList(convertFile);
     }
 
     @Override
@@ -214,6 +305,10 @@ public class VysePlugin extends PluginAdapter {
         }
         targetProject = getPropertyAsString(super.context.getProperties(), "targetProject");
         baseJavaPackage = getPropertyAsString(super.context.getProperties(), "baseJavaPackage");
+        servicePackage = getPropertyAsString(super.context.getProperties(), "servicePackage", "service");
+        serviceImplPackage = getPropertyAsString(super.context.getProperties(), "serviceImplPackage", "service.impl");
+        dtoPackage = getPropertyAsString(super.context.getProperties(), "dtoPackage", "dto");
+        convertPackage = getPropertyAsString(super.context.getProperties(), "convertPackage", "convert");
         //支持oracle获取注释#114
         context.getJdbcConnectionConfiguration().addProperty("remarksReporting", "true");
         //支持mysql获取注释
@@ -242,14 +337,33 @@ public class VysePlugin extends PluginAdapter {
         super.setProperties(properties);
         lombok = getPropertyAsBoolean(properties, "lombok", false);
         lombokBuilder = getPropertyAsBoolean(properties, "lombokBuilder", false);
-        swagger = getPropertyAsBoolean(properties, "swagger", false);
-        service = getPropertyAsBoolean(properties, "service", false);
-        dto = getPropertyAsBoolean(properties, "dto", false);
+        enableSwagger = getPropertyAsBoolean(properties, "enableSwagger", false);
+        createService = getPropertyAsBoolean(properties, "createService", false);
+        createDto = getPropertyAsBoolean(properties, "createDto", false);
+        createConvert = getPropertyAsBoolean(properties, "createConvert", false);
         super.context.getCommentGeneratorConfiguration().addProperty("lombok", getPropertyAsString(properties, "lombok"));
-        super.context.getCommentGeneratorConfiguration().addProperty("swagger", getPropertyAsString(properties, "swagger"));
+        super.context.getCommentGeneratorConfiguration().addProperty("enableSwagger", getPropertyAsString(properties, "enableSwagger"));
+    }
+
+    private String getDomainTargetPackage() {
+        return this.context.getJavaModelGeneratorConfiguration().getTargetPackage();
     }
 
     private String getDomainObjectName(IntrospectedTable introspectedTable) {
+        String domainObjectName = introspectedTable.getTableConfiguration().getDomainObjectName();
+        if (StringUtils.isBlank(domainObjectName)) {
+            return getDomainName(introspectedTable);
+        }
+        return domainObjectName;
+    }
+
+    /**
+     * 获取标准的模型名称
+     *
+     * @param introspectedTable
+     * @return
+     */
+    private String getDomainName(IntrospectedTable introspectedTable) {
         DomainObjectRenamingRule rule = introspectedTable.getTableConfiguration().getDomainObjectRenamingRule();
         String domainObjectName = introspectedTable.getTableConfiguration().getTableName();
         domainObjectName = JavaBeansUtil.getCamelCaseString(domainObjectName, true);
@@ -273,12 +387,18 @@ public class VysePlugin extends PluginAdapter {
                 topLevelClass.addAnnotation("@EqualsAndHashCode(callSuper = false)");
                 topLevelClass.addAnnotation("@ToString(callSuper = true)");
             }
+            if (lombokBuilder) {
+                topLevelClass.addImportedType("lombok.NoArgsConstructor");
+                topLevelClass.addAnnotation("@NoArgsConstructor");
+                topLevelClass.addImportedType("lombok.AllArgsConstructor");
+                topLevelClass.addAnnotation("@AllArgsConstructor");
+            }
         }
         if (lombokBuilder) {
             topLevelClass.addImportedType("lombok.Builder");
             topLevelClass.addAnnotation("@Builder");
         }
-        if (swagger) {
+        if (enableSwagger) {
             //导包
             topLevelClass.addImportedType("io.swagger.annotations.ApiModel");
             topLevelClass.addImportedType("io.swagger.annotations.ApiModelProperty");
@@ -297,7 +417,7 @@ public class VysePlugin extends PluginAdapter {
     }
 
     private void addFieldAnnotation(Field field, IntrospectedColumn introspectedColumn) {
-        if (swagger) {
+        if (enableSwagger) {
             String remarks = introspectedColumn.getRemarks();
             remarks = remarks.replaceAll("\r", "").replaceAll("\n", "");
             if (StringUtils.isNoneBlank(remarks)) {

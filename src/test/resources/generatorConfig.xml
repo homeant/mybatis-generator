@@ -9,14 +9,18 @@
         <property name="useMapperCommentGenerator" value="true"/>
         <property name="baseJavaPackage" value="fun.vyse.cloud.test"/>
         <property name="targetProject" value="./src/test/java"/>
-
+        <property name="servicePackage" value="service"/>
+        <property name="serviceImplPackage" value="service.impl"/>
+        <property name="dtoImplPackage" value="dto"/>
+        <property name="convertPackage" value="convert"/>
 
         <plugin type="fun.vyse.cloud.generator.mybatis.plugin.VysePlugin">
             <property name="lombok" value="true"/>
             <property name="lombokBuilder" value="true"/>
-            <property name="swagger" value="true"/>
-            <property name="service" value="true"/>
-            <property name="dto" value="true"/>
+            <property name="enableSwagger" value="true"/>
+            <property name="createService" value="true"/>
+            <property name="createDto" value="true"/>
+            <property name="createConvert" value="true"/>
         </plugin>
 
         <jdbcConnection driverClass="com.mysql.cj.jdbc.Driver"
@@ -37,7 +41,6 @@
         <table tableName="act_model"
 
                enableInsert="true"
-
                enableSelectByPrimaryKey="true"
                enableUpdateByPrimaryKey="true"
                enableDeleteByPrimaryKey="true"
