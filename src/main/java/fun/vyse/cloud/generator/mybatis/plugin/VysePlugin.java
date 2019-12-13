@@ -222,18 +222,19 @@ public class VysePlugin extends PluginAdapter {
         if (!createConvert || !createDto) {
             return Collections.emptyList();
         }
-
         String domainName = getDomainName(introspectedTable);
         String convertClassName = domainName + "Convert";
-        String absoluteClassName = baseJavaPackage + "." + convertPackage + "." + convertClassName;
-        String domainPath = getDomainTargetPackage() + "." + domainName;
-        String domainParam = domainName.substring(0, 1).toLowerCase() + domainName.substring(1);
-        FullyQualifiedJavaType domainType = new FullyQualifiedJavaType(domainPath);
+        String convertClassPath = baseJavaPackage + "." + convertPackage + "." + convertClassName;
 
-        TopLevelClass reqConvertClass = new TopLevelClass(absoluteClassName);
+        String domainObjectName = getDomainObjectName(introspectedTable);
+        String domainObjectPath = getDomainTargetPackage() + "." + domainObjectName;
+        String domainObjectParam = domainObjectName.substring(0, 1).toLowerCase() + domainObjectName.substring(1);
+        FullyQualifiedJavaType domainObjectType = new FullyQualifiedJavaType(domainObjectPath);
+
+        TopLevelClass reqConvertClass = new TopLevelClass(convertClassPath);
         reqConvertClass.setVisibility(JavaVisibility.PUBLIC);
 
-        reqConvertClass.addImportedType(domainPath);
+        reqConvertClass.addImportedType(domainObjectPath);
 
         String reqDtoName = domainName + "ReqDTO";
         String reqDtoNamePath = baseJavaPackage + "." + dtoPackage + "." + reqDtoName;
@@ -248,19 +249,19 @@ public class VysePlugin extends PluginAdapter {
         reqMethod.setStatic(true);
 
         reqMethod.addParameter(new Parameter(reqDtoType, reqDtoParam));
-        reqMethod.setReturnType(domainType);
+        reqMethod.setReturnType(domainObjectType);
 
-        reqMethod.addBodyLine(domainName + " " + domainParam + " = new " + domainName + "();");
+        reqMethod.addBodyLine(domainObjectName + " " + domainObjectParam + " = new " + domainObjectName + "();");
         List<IntrospectedColumn> columns = introspectedTable.getAllColumns();
         if (CollectionUtils.isNotEmpty(columns)) {
             columns.stream().forEach(r -> {
                 Method setter = JavaBeansUtil.getJavaBeansSetter(r, context, introspectedTable);
                 String getter = JavaBeansUtil.getGetterMethodName(r.getJavaProperty(), reqDtoType);
-                String setString = domainParam + "." + setter.getName() + "(" + reqDtoParam + "." + getter + "());";
+                String setString = domainObjectParam + "." + setter.getName() + "(" + reqDtoParam + "." + getter + "());";
                 reqMethod.addBodyLine(setString);
             });
         }
-        reqMethod.addBodyLine("return " + domainParam + ";");
+        reqMethod.addBodyLine("return " + domainObjectParam + ";");
         reqConvertClass.addMethod(reqMethod);
 
         // -----------------------------------------------------------------------------
@@ -275,15 +276,15 @@ public class VysePlugin extends PluginAdapter {
         Method resultMethod = new Method(resultMethodName);
         resultMethod.setVisibility(JavaVisibility.PUBLIC);
         resultMethod.setStatic(true);
-        resultMethod.addParameter(new Parameter(domainType, domainParam));
+        resultMethod.addParameter(new Parameter(domainObjectType, domainObjectParam));
         resultMethod.setReturnType(resultDtoType);
 
         resultMethod.addBodyLine(resultDtoName + " " + resultDtoParam + " = new " + resultDtoName + "();");
         if (CollectionUtils.isNotEmpty(columns)) {
             columns.stream().forEach(r -> {
                 Method setter = JavaBeansUtil.getJavaBeansSetter(r, context, introspectedTable);
-                String getter = JavaBeansUtil.getGetterMethodName(r.getJavaProperty(), domainType);
-                String setString = resultDtoParam + "." + setter.getName() + "(" + domainParam + "." + getter + "());";
+                String getter = JavaBeansUtil.getGetterMethodName(r.getJavaProperty(), domainObjectType);
+                String setString = resultDtoParam + "." + setter.getName() + "(" + domainObjectParam + "." + getter + "());";
                 resultMethod.addBodyLine(setString);
             });
         }
