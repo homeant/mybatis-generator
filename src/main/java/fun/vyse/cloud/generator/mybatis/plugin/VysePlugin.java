@@ -66,7 +66,7 @@ public class VysePlugin extends PluginAdapter {
 
     @Override
     public boolean modelBaseRecordClassGenerated(TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
-        addAnnotation(topLevelClass, introspectedTable);
+        addAnnotation(topLevelClass, introspectedTable, ClassType.MODEL);
         return true;
     }
 
@@ -143,7 +143,7 @@ public class VysePlugin extends PluginAdapter {
 
     @Override
     public boolean modelFieldGenerated(Field field, TopLevelClass topLevelClass, IntrospectedColumn introspectedColumn, IntrospectedTable introspectedTable, ModelClassType modelClassType) {
-        addFieldAnnotation(field, introspectedColumn);
+        addFieldAnnotation(field, introspectedColumn, ClassType.MODEL);
         return true;
     }
 
@@ -176,9 +176,10 @@ public class VysePlugin extends PluginAdapter {
         if (!createDto) {
             return Collections.emptyList();
         }
+        ClassType type = ClassType.DTO;
         String domainObjectName = getDomainName(introspectedTable);
         TopLevelClass dtoReqClass = new TopLevelClass(baseJavaPackage + "." + dtoPackage + "." + domainObjectName + "ReqDTO");
-        addAnnotation(dtoReqClass, introspectedTable);
+        addAnnotation(dtoReqClass, introspectedTable, type);
         dtoReqClass.addImportedType("java.io.Serializable");
         dtoReqClass.addSuperInterface(new FullyQualifiedJavaType("java.io.Serializable"));
         dtoReqClass.setVisibility(JavaVisibility.PUBLIC);
@@ -187,14 +188,18 @@ public class VysePlugin extends PluginAdapter {
             allColumns.stream().forEach(r -> {
                 dtoReqClass.addImportedType(r.getFullyQualifiedJavaType());
                 Field field = new Field(JavaBeansUtil.getJavaBeansField(r, this.context, introspectedTable));
-                addFieldAnnotation(field, r);
+                addFieldAnnotation(field, r, type);
                 dtoReqClass.addField(field);
             });
         }
         GeneratedJavaFile dtoReqFile = new GeneratedJavaFile(dtoReqClass, targetProject, context.getJavaFormatter());
 
         TopLevelClass dtoResultClass = new TopLevelClass(baseJavaPackage + "." + dtoPackage + "." + domainObjectName + "ResultDTO");
-        addAnnotation(dtoResultClass, introspectedTable);
+        if (enableSwagger) {
+            dtoResultClass.addImportedType("io.swagger.annotations.ApiModel");
+            dtoResultClass.addImportedType("io.swagger.annotations.ApiModelProperty");
+        }
+        addAnnotation(dtoResultClass, introspectedTable, type);
         dtoResultClass.addImportedType("java.io.Serializable");
         dtoResultClass.addSuperInterface(new FullyQualifiedJavaType("java.io.Serializable"));
         dtoResultClass.setVisibility(JavaVisibility.PUBLIC);
@@ -202,7 +207,7 @@ public class VysePlugin extends PluginAdapter {
             allColumns.stream().forEach(r -> {
                 dtoResultClass.addImportedType(r.getFullyQualifiedJavaType());
                 Field field = new Field(JavaBeansUtil.getJavaBeansField(r, this.context, introspectedTable));
-                addFieldAnnotation(field, r);
+                addFieldAnnotation(field, r, type);
                 dtoResultClass.addField(field);
             });
         }
@@ -378,7 +383,7 @@ public class VysePlugin extends PluginAdapter {
         return domainObjectName;
     }
 
-    private void addAnnotation(TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
+    private void addAnnotation(TopLevelClass topLevelClass, IntrospectedTable introspectedTable, ClassType type) {
         if (lombok) {
             topLevelClass.addImportedType("lombok.Data");
             topLevelClass.addAnnotation("@Data");
@@ -399,7 +404,8 @@ public class VysePlugin extends PluginAdapter {
             topLevelClass.addImportedType("lombok.Builder");
             topLevelClass.addAnnotation("@Builder");
         }
-        if (enableSwagger) {
+        boolean flag = (ClassType.MODEL.equals(type) && !createDto) || (ClassType.DTO.equals(type));
+        if (flag && enableSwagger) {
             //导包
             topLevelClass.addImportedType("io.swagger.annotations.ApiModel");
             topLevelClass.addImportedType("io.swagger.annotations.ApiModelProperty");
@@ -415,10 +421,12 @@ public class VysePlugin extends PluginAdapter {
                 topLevelClass.addAnnotation("@ApiModel(\"" + topLevelClass.getType().getShortName() + "\")");
             }
         }
+
     }
 
-    private void addFieldAnnotation(Field field, IntrospectedColumn introspectedColumn) {
-        if (enableSwagger) {
+    private void addFieldAnnotation(Field field, IntrospectedColumn introspectedColumn, ClassType type) {
+        boolean flag = (ClassType.MODEL.equals(type) && !createDto) || (ClassType.DTO.equals(type));
+        if (flag && enableSwagger) {
             String remarks = introspectedColumn.getRemarks();
             remarks = remarks.replaceAll("\r", "").replaceAll("\n", "");
             if (StringUtils.isNoneBlank(remarks)) {
@@ -428,6 +436,17 @@ public class VysePlugin extends PluginAdapter {
                 field.addAnnotation(buffer.toString());
             }
         }
+    }
+
+    public enum ClassType {
+        /**
+         * model
+         */
+        MODEL,
+        /**
+         * dto
+         */
+        DTO;
     }
 
 }
