@@ -18,9 +18,11 @@
             <property name="lombok" value="true"/>
             <property name="lombokBuilder" value="true"/>
             <property name="enableSwagger" value="true"/>
+            <property name="enableValidation" value="true"/>
             <property name="createService" value="true"/>
             <property name="createDto" value="true"/>
             <property name="createConvert" value="true"/>
+
         </plugin>
 
         <jdbcConnection driverClass="com.mysql.cj.jdbc.Driver"

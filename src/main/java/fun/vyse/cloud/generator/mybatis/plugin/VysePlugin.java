@@ -38,6 +38,8 @@ public class VysePlugin extends PluginAdapter {
 
     private boolean enableSwagger = false;
 
+    private boolean enableValidation = false;
+
     private boolean comment = false;
 
     private boolean createService = false;
@@ -143,7 +145,7 @@ public class VysePlugin extends PluginAdapter {
 
     @Override
     public boolean modelFieldGenerated(Field field, TopLevelClass topLevelClass, IntrospectedColumn introspectedColumn, IntrospectedTable introspectedTable, ModelClassType modelClassType) {
-        addFieldAnnotation(field, introspectedColumn, ClassType.MODEL);
+        addFieldAnnotation(field, introspectedColumn, topLevelClass, ClassType.MODEL);
         return true;
     }
 
@@ -188,7 +190,7 @@ public class VysePlugin extends PluginAdapter {
             allColumns.stream().forEach(r -> {
                 dtoReqClass.addImportedType(r.getFullyQualifiedJavaType());
                 Field field = new Field(JavaBeansUtil.getJavaBeansField(r, this.context, introspectedTable));
-                addFieldAnnotation(field, r, type);
+                addFieldAnnotation(field, r, dtoReqClass, type);
                 dtoReqClass.addField(field);
             });
         }
@@ -207,7 +209,7 @@ public class VysePlugin extends PluginAdapter {
             allColumns.stream().forEach(r -> {
                 dtoResultClass.addImportedType(r.getFullyQualifiedJavaType());
                 Field field = new Field(JavaBeansUtil.getJavaBeansField(r, this.context, introspectedTable));
-                addFieldAnnotation(field, r, type);
+                addFieldAnnotation(field, r, dtoResultClass, type);
                 dtoResultClass.addField(field);
             });
         }
@@ -344,6 +346,7 @@ public class VysePlugin extends PluginAdapter {
         lombok = getPropertyAsBoolean(properties, "lombok", false);
         lombokBuilder = getPropertyAsBoolean(properties, "lombokBuilder", false);
         enableSwagger = getPropertyAsBoolean(properties, "enableSwagger", false);
+        enableValidation = getPropertyAsBoolean(properties, "enableValidation", false);
         createService = getPropertyAsBoolean(properties, "createService", false);
         createDto = getPropertyAsBoolean(properties, "createDto", false);
         createConvert = getPropertyAsBoolean(properties, "createConvert", false);
@@ -408,7 +411,6 @@ public class VysePlugin extends PluginAdapter {
         if (flag && enableSwagger) {
             //导包
             topLevelClass.addImportedType("io.swagger.annotations.ApiModel");
-            topLevelClass.addImportedType("io.swagger.annotations.ApiModelProperty");
             //增加注解(去除注释中的转换符)
             String remarks = introspectedTable.getRemarks();
             if (remarks == null) {
@@ -424,9 +426,10 @@ public class VysePlugin extends PluginAdapter {
 
     }
 
-    private void addFieldAnnotation(Field field, IntrospectedColumn introspectedColumn, ClassType type) {
+    private void addFieldAnnotation(Field field, IntrospectedColumn introspectedColumn, TopLevelClass topLevelClass, ClassType type) {
         boolean flag = (ClassType.MODEL.equals(type) && !createDto) || (ClassType.DTO.equals(type));
         if (flag && enableSwagger) {
+            topLevelClass.addImportedType("io.swagger.annotations.ApiModelProperty");
             String remarks = introspectedColumn.getRemarks();
             remarks = remarks.replaceAll("\r", "").replaceAll("\n", "");
             if (StringUtils.isNoneBlank(remarks)) {
@@ -434,6 +437,15 @@ public class VysePlugin extends PluginAdapter {
                 buffer.append("value=\"" + remarks + "\"");
                 buffer.append(")");
                 field.addAnnotation(buffer.toString());
+            }
+        }
+        if (flag && enableValidation) {
+            topLevelClass.addImportedType(new FullyQualifiedJavaType("org.hibernate.validator.constraints.Length"));
+            int length = introspectedColumn.getLength();
+            String fullyQualifiedName = introspectedColumn.getFullyQualifiedJavaType().getFullyQualifiedName();
+            String stringClassName = "java.lang.String";
+            if (stringClassName.equals(fullyQualifiedName)) {
+                field.addAnnotation("@Length(max = " + length + ")");
             }
         }
     }
