@@ -8,4 +8,3 @@ target/
 
 .gitignore
 src/test/java/
-!/src/test/java/fun/vyse/cloud/validation/
