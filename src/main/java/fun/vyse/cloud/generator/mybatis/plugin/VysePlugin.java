@@ -14,10 +14,7 @@ import org.mybatis.generator.config.Context;
 import org.mybatis.generator.config.DomainObjectRenamingRule;
 import org.mybatis.generator.internal.util.JavaBeansUtil;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -60,6 +57,8 @@ public class VysePlugin extends PluginAdapter {
 
     private String convertPackage;
 
+    private boolean enableOptional = false;
+
 
     @Override
     public boolean validate(List<String> list) {
@@ -70,6 +69,14 @@ public class VysePlugin extends PluginAdapter {
     public boolean modelBaseRecordClassGenerated(TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
         addAnnotation(topLevelClass, introspectedTable, ClassType.MODEL);
         return true;
+    }
+
+    @Override
+    public boolean clientGenerated(Interface interfaze, IntrospectedTable introspectedTable) {
+        if (enableOptional) {
+            interfaze.addImportedType(new FullyQualifiedJavaType("java.util.Optional"));
+        }
+        return super.clientGenerated(interfaze, introspectedTable);
     }
 
     @Override
@@ -85,6 +92,13 @@ public class VysePlugin extends PluginAdapter {
         StringBuffer buffer = new StringBuffer("selectBy");
         String methodName = getByPrimaryKeyMethodName(buffer, introspectedTable);
         method.setName(methodName);
+        if (enableOptional) {
+            FullyQualifiedJavaType fullyQualifiedJavaType = new FullyQualifiedJavaType("java.util.Optional");
+            String domainObjectName = getDomainObjectName(introspectedTable);
+            String domainObjectPath = getDomainTargetPackage() + "." + domainObjectName;
+            fullyQualifiedJavaType.addTypeArgument(new FullyQualifiedJavaType(domainObjectPath));
+            method.setReturnType(fullyQualifiedJavaType);
+        }
         return super.clientSelectByPrimaryKeyMethodGenerated(method, interfaze, introspectedTable);
     }
 
@@ -350,6 +364,7 @@ public class VysePlugin extends PluginAdapter {
         createService = getPropertyAsBoolean(properties, "createService", false);
         createDto = getPropertyAsBoolean(properties, "createDto", false);
         createConvert = getPropertyAsBoolean(properties, "createConvert", false);
+        enableOptional = getPropertyAsBoolean(properties, "enableOptional", false);
         super.context.getCommentGeneratorConfiguration().addProperty("lombok", getPropertyAsString(properties, "lombok"));
         super.context.getCommentGeneratorConfiguration().addProperty("enableSwagger", getPropertyAsString(properties, "enableSwagger"));
     }

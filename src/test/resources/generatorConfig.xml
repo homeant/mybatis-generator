@@ -22,7 +22,7 @@
             <property name="createService" value="true"/>
             <property name="createDto" value="true"/>
             <property name="createConvert" value="true"/>
-
+            <property name="enableOptional" value="true"/>
         </plugin>
 
         <jdbcConnection driverClass="com.mysql.cj.jdbc.Driver"
@@ -41,7 +41,6 @@
                              type="ANNOTATEDMAPPER"/>
 
         <table tableName="act_model"
-
                enableInsert="true"
                enableSelectByPrimaryKey="true"
                enableUpdateByPrimaryKey="true"

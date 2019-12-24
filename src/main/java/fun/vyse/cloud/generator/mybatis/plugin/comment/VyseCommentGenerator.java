@@ -182,7 +182,6 @@ public class VyseCommentGenerator implements CommentGenerator {
 
     @Override
     public void addClassAnnotation(InnerClass innerClass, IntrospectedTable introspectedTable, Set<FullyQualifiedJavaType> set) {
-        System.out.println(innerClass);
     }
 
     private String getDateString() {
