@@ -43,25 +43,27 @@ public class VysePlugin extends PluginAdapter {
 
     private boolean createDto = false;
 
-    private boolean createConvert = false;
+	private boolean createConvert = false;
 
-    private String targetProject;
+	private String targetProject;
 
-    private String baseJavaPackage;
+	private String baseJavaPackage;
 
-    private String servicePackage;
+	private String servicePackage;
 
-    private String serviceImplPackage;
+	private String serviceImplPackage;
 
-    private String dtoPackage;
+	private String sqlProviderRootClass;
 
-    private String convertPackage;
+	private String dtoPackage;
 
-    private boolean enableOptional = false;
+	private String convertPackage;
+
+	private boolean enableOptional = false;
 
 
-    @Override
-    public boolean validate(List<String> list) {
+	@Override
+	public boolean validate(List<String> list) {
         return true;
     }
 
@@ -69,27 +71,43 @@ public class VysePlugin extends PluginAdapter {
     public boolean modelBaseRecordClassGenerated(TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
         addAnnotation(topLevelClass, introspectedTable, ClassType.MODEL);
         return true;
-    }
+	}
 
-    @Override
-    public boolean clientGenerated(Interface interfaze, IntrospectedTable introspectedTable) {
-        if (enableOptional) {
-            interfaze.addImportedType(new FullyQualifiedJavaType("java.util.Optional"));
-        }
-        return super.clientGenerated(interfaze, introspectedTable);
-    }
+	@Override
+	public boolean clientGenerated(Interface interfaze, IntrospectedTable introspectedTable) {
+		if (enableOptional) {
+			interfaze.addImportedType(new FullyQualifiedJavaType("java.util.Optional"));
+		}
+		return super.clientGenerated(interfaze, introspectedTable);
+	}
 
-    @Override
-    public boolean clientDeleteByPrimaryKeyMethodGenerated(Method method, Interface interfaze, IntrospectedTable introspectedTable) {
-        StringBuffer buffer = new StringBuffer("deleteBy");
-        String methodName = getByPrimaryKeyMethodName(buffer, introspectedTable);
-        method.setName(methodName);
-        return super.clientDeleteByPrimaryKeyMethodGenerated(method, interfaze, introspectedTable);
-    }
+	@Override
+	public boolean providerGenerated(TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
+		boolean flag = super.providerGenerated(topLevelClass, introspectedTable);
+		if (flag) {
+			if (StringUtils.isNotBlank(sqlProviderRootClass)) {
+				FullyQualifiedJavaType fullyQualifiedJavaType = new FullyQualifiedJavaType(sqlProviderRootClass);
+				String domainObjectName = getDomainObjectName(introspectedTable);
+				String domainObjectPath = getDomainTargetPackage() + "." + domainObjectName;
+				fullyQualifiedJavaType.addTypeArgument(new FullyQualifiedJavaType(domainObjectPath));
+				topLevelClass.setSuperClass(fullyQualifiedJavaType);
+				topLevelClass.addImportedType(new FullyQualifiedJavaType(sqlProviderRootClass));
+			}
+		}
+		return flag;
+	}
 
-    @Override
-    public boolean clientSelectByPrimaryKeyMethodGenerated(Method method, Interface interfaze, IntrospectedTable introspectedTable) {
-        StringBuffer buffer = new StringBuffer("selectBy");
+	@Override
+	public boolean clientDeleteByPrimaryKeyMethodGenerated(Method method, Interface interfaze, IntrospectedTable introspectedTable) {
+		StringBuffer buffer = new StringBuffer("deleteBy");
+		String methodName = getByPrimaryKeyMethodName(buffer, introspectedTable);
+		method.setName(methodName);
+		return super.clientDeleteByPrimaryKeyMethodGenerated(method, interfaze, introspectedTable);
+	}
+
+	@Override
+	public boolean clientSelectByPrimaryKeyMethodGenerated(Method method, Interface interfaze, IntrospectedTable introspectedTable) {
+		StringBuffer buffer = new StringBuffer("selectBy");
         String methodName = getByPrimaryKeyMethodName(buffer, introspectedTable);
         method.setName(methodName);
         if (enableOptional) {
@@ -321,24 +339,25 @@ public class VysePlugin extends PluginAdapter {
         super.setContext(context);
         comment = Boolean.parseBoolean(context.getProperty("useMapperCommentGenerator"));
         if (comment) {
-            CommentGeneratorConfiguration commentCfg = new CommentGeneratorConfiguration();
-            commentCfg.setConfigurationType(VyseCommentGenerator.class.getCanonicalName());
-            context.setCommentGeneratorConfiguration(commentCfg);
-        }
-        targetProject = getPropertyAsString(super.context.getProperties(), "targetProject");
-        baseJavaPackage = getPropertyAsString(super.context.getProperties(), "baseJavaPackage");
-        servicePackage = getPropertyAsString(super.context.getProperties(), "servicePackage", "service");
-        serviceImplPackage = getPropertyAsString(super.context.getProperties(), "serviceImplPackage", "service.impl");
-        dtoPackage = getPropertyAsString(super.context.getProperties(), "dtoPackage", "dto");
-        convertPackage = getPropertyAsString(super.context.getProperties(), "convertPackage", "convert");
-        //支持oracle获取注释#114
-        context.getJdbcConnectionConfiguration().addProperty("remarksReporting", "true");
-        //支持mysql获取注释
-        context.getJdbcConnectionConfiguration().addProperty("useInformationSchema", "true");
+			CommentGeneratorConfiguration commentCfg = new CommentGeneratorConfiguration();
+			commentCfg.setConfigurationType(VyseCommentGenerator.class.getCanonicalName());
+			context.setCommentGeneratorConfiguration(commentCfg);
+		}
+		targetProject = getPropertyAsString(super.context.getProperties(), "targetProject");
+		baseJavaPackage = getPropertyAsString(super.context.getProperties(), "baseJavaPackage");
+		servicePackage = getPropertyAsString(super.context.getProperties(), "servicePackage", "service");
+		serviceImplPackage = getPropertyAsString(super.context.getProperties(), "serviceImplPackage", "service.impl");
+		dtoPackage = getPropertyAsString(super.context.getProperties(), "dtoPackage", "dto");
+		convertPackage = getPropertyAsString(super.context.getProperties(), "convertPackage", "convert");
+		sqlProviderRootClass = getPropertyAsString(super.context.getProperties(), "sqlProviderRootClass", null);
+		//支持oracle获取注释#114
+		context.getJdbcConnectionConfiguration().addProperty("remarksReporting", "true");
+		//支持mysql获取注释
+		context.getJdbcConnectionConfiguration().addProperty("useInformationSchema", "true");
 
-        context.getCommentGeneratorConfiguration().addProperty("dateFormat", "yyyy-MM-dd");
+		context.getCommentGeneratorConfiguration().addProperty("dateFormat", "yyyy-MM-dd");
 
-    }
+	}
 
     private String getByPrimaryKeyMethodName(StringBuffer buffer, IntrospectedTable introspectedTable) {
         List<IntrospectedColumn> columns = introspectedTable.getPrimaryKeyColumns();
